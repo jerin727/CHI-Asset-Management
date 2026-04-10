@@ -48,6 +48,14 @@ export default function Assignments() {
       .order("assigned_at", { ascending: false });
 
     setAssignments(data || []);
+    await supabase.from("notifications").insert([
+  {
+    user_id: selectedUser,
+    title: "New Asset Assigned",
+    message: "An asset has been assigned to you.",
+    type: "assignment"
+  }
+]);
   }
 
   // 🔹 Assign Asset

@@ -284,12 +284,14 @@
 //   );
 // }
 
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate , Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useNotifications } from "../context/NotificationContext";
 
 export default function Navbar() {
   const { user, profile, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount } = useNotifications();
 
   async function handleLogout() {
     await logout();
@@ -300,7 +302,7 @@ export default function Navbar() {
     <nav style={navStyle}>
       {/* Logo */}
       <div style={logoStyle}>
-        <span style={{ color: "#3b82f6" }}>Asset</span> Manager
+        <span style={{ color: "#3b82f6" }}>CHI</span> Asset Management
       </div>
 
       {/* Navigation Links */}
@@ -325,12 +327,22 @@ export default function Navbar() {
               Users
             </NavLink>
           )}
-
+          <NavLink to="/maintenance" style={linkStyle}>
+            Maintenance
+          </NavLink>
+          {isAdmin && (
+            <NavLink to="/audit-logs" style={linkStyle}>
+              Audit Logs
+            </NavLink>
+          )}
           {/* {isAdmin && (
             <NavLink to="/admin" style={linkStyle}>
               Admin Panel
             </NavLink>
           )} */}
+          <Link to="/notifications">
+            🔔 {unreadCount > 0 && <span>({unreadCount})</span>}
+          </Link>
         </div>
       )}
 

@@ -4,6 +4,10 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { Link } from "react-router-dom";
 
 export default function Assets() {
+  
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
   const [assets, setAssets] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -18,24 +22,58 @@ export default function Assets() {
     purchase_date: "",
     purchase_cost: "",
     status: "available",
-    department_id: ""
+    department_id: "",
   });
 
   const [editingId, setEditingId] = useState(null);
 
   // FETCH ASSETS
+  // async function fetchAssets() {
+  //   setLoading(true);
+
+  //   const { data, error } = await supabase
+  //     .from("assets")
+  //     .select("*, departments(name)")
+  //     .order("created_at", { ascending: false });
+
+  //   if (!error) setAssets(data);
+
+  //   setLoading(false);
+  // }
   async function fetchAssets() {
-    setLoading(true);
+  let query = supabase
+    .from("assets")
+    .select(`
+      *,
+      departments(name)
+    `)
+    .order("created_at", { ascending: false });
 
-    const { data, error } = await supabase
-      .from("assets")
-      .select("*, departments(name)")
-      .order("created_at", { ascending: false });
-
-    if (!error) setAssets(data);
-
-    setLoading(false);
+  // 🔎 Search
+  if (search) {
+    query = query.or(
+      `name.ilike.%${search}%,asset_tag.ilike.%${search}%`
+    );
   }
+
+  // 📌 Status filter
+  if (statusFilter) {
+    query = query.eq("status", statusFilter);
+  }
+
+  // 🏢 Department filter
+  if (departmentFilter) {
+    query = query.eq("department_id", departmentFilter);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error(error);
+  } else {
+    setAssets(data);
+  }
+}
 
   // FETCH DEPARTMENTS
   async function fetchDepartments() {
@@ -46,6 +84,9 @@ export default function Assets() {
 
     setDepartments(data || []);
   }
+ useEffect(() => {
+  fetchAssets();
+}, [search, statusFilter, departmentFilter]);
 
   useEffect(() => {
     fetchAssets();
@@ -58,76 +99,76 @@ export default function Assets() {
   }
 
   // ADD ASSET
-//   async function addAsset(e) {
-//     e.preventDefault();
-//     setActionLoading(true);
+  //   async function addAsset(e) {
+  //     e.preventDefault();
+  //     setActionLoading(true);
 
-//     const { error } = await supabase
-//       .from("assets")
-//       .insert([{ ...form }]);
+  //     const { error } = await supabase
+  //       .from("assets")
+  //       .insert([{ ...form }]);
 
-//     if (!error) {
-//       setForm({
-//         asset_tag: "",
-//         name: "",
-//         category: "",
-//         purchase_date: "",
-//         purchase_cost: "",
-//         status: "available",
-//         department_id: ""
-//       });
-//       fetchAssets();
-//     }
+  //     if (!error) {
+  //       setForm({
+  //         asset_tag: "",
+  //         name: "",
+  //         category: "",
+  //         purchase_date: "",
+  //         purchase_cost: "",
+  //         status: "available",
+  //         department_id: ""
+  //       });
+  //       fetchAssets();
+  //     }
 
-//     setActionLoading(false);
-//   }
-// async function addAsset(e) {
-//   e.preventDefault();
-//   setActionLoading(true);
+  //     setActionLoading(false);
+  //   }
+  // async function addAsset(e) {
+  //   e.preventDefault();
+  //   setActionLoading(true);
 
-//   const { data, error } = await supabase
-//     .from("assets")
-//     .insert([{ ...form }])
-//     .select();
+  //   const { data, error } = await supabase
+  //     .from("assets")
+  //     .insert([{ ...form }])
+  //     .select();
 
-//   console.log("Insert result:", data);
-//   console.log("Insert error:", error);
+  //   console.log("Insert result:", data);
+  //   console.log("Insert error:", error);
 
-//   if (error) {
-//     alert(error.message);
-//   } else {
-//     fetchAssets();
-//   }
+  //   if (error) {
+  //     alert(error.message);
+  //   } else {
+  //     fetchAssets();
+  //   }
 
-//   setActionLoading(false);
-// }
-async function addAsset(e) {
-  e.preventDefault();
-  setActionLoading(true);
+  //   setActionLoading(false);
+  // }
+  async function addAsset(e) {
+    e.preventDefault();
+    setActionLoading(true);
 
-  const cleanedData = {
-    ...form,
-    department_id: form.department_id || null,
-    purchase_cost: form.purchase_cost || null,
-    purchase_date: form.purchase_date || null,
-  };
+    const cleanedData = {
+      ...form,
+      department_id: form.department_id || null,
+      purchase_cost: form.purchase_cost || null,
+      purchase_date: form.purchase_date || null,
+    };
 
-  const { data, error } = await supabase
-    .from("assets")
-    .insert([cleanedData])
-    .select();
+    const { data, error } = await supabase
+      .from("assets")
+      .insert([cleanedData])
+      .select();
 
-  console.log("Insert result:", data);
-  console.log("Insert error:", error);
+    console.log("Insert result:", data);
+    console.log("Insert error:", error);
 
-  if (error) {
-    alert(error.message);
-  } else {
-    fetchAssets();
+    if (error) {
+      alert(error.message);
+    } else {
+      fetchAssets();
+    }
+
+    setActionLoading(false);
   }
-
-  setActionLoading(false);
-}
 
   // DELETE ASSET
   async function deleteAsset(id) {
@@ -143,10 +184,7 @@ async function addAsset(e) {
   async function updateAsset(id) {
     setActionLoading(true);
 
-    await supabase
-      .from("assets")
-      .update(form)
-      .eq("id", id);
+    await supabase.from("assets").update(form).eq("id", id);
 
     setEditingId(null);
     setActionLoading(false);
@@ -163,14 +201,49 @@ async function addAsset(e) {
       purchase_date: asset.purchase_date || "",
       purchase_cost: asset.purchase_cost || "",
       status: asset.status,
-      department_id: asset.department_id || ""
+      department_id: asset.department_id || "",
     });
   }
 
   return (
     <div>
       <h2>Assets</h2>
+<div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
 
+  {/* 🔎 Search */}
+  <input
+    type="text"
+    placeholder="Search by name or tag..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+  />
+
+  {/* 📌 Status Filter */}
+  <select
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+  >
+    <option value="">All Status</option>
+    <option value="available">Available</option>
+    <option value="assigned">Assigned</option>
+    <option value="maintenance">Maintenance</option>
+    <option value="retired">Retired</option>
+  </select>
+
+  {/* 🏢 Department Filter */}
+  <select
+    value={departmentFilter}
+    onChange={(e) => setDepartmentFilter(e.target.value)}
+  >
+    <option value="">All Departments</option>
+    {departments.map((dept) => (
+      <option key={dept.id} value={dept.id}>
+        {dept.name}
+      </option>
+    ))}
+  </select>
+
+</div>
       {/* ADD FORM */}
       <form onSubmit={addAsset}>
         <input
@@ -208,11 +281,7 @@ async function addAsset(e) {
         />
 
         {/* STATUS DROPDOWN */}
-        <select
-          name="status"
-          value={form.status}
-          onChange={handleChange}
-        >
+        <select name="status" value={form.status} onChange={handleChange}>
           <option value="available">Available</option>
           <option value="assigned">Assigned</option>
           <option value="maintenance">Maintenance</option>
@@ -242,10 +311,10 @@ async function addAsset(e) {
       {loading ? (
         <p>Loading assets...</p>
       ) : (
+        
         <ul>
           {assets.map((asset) => (
             <li key={asset.id}>
-
               {editingId === asset.id ? (
                 <>
                   <input
@@ -259,32 +328,19 @@ async function addAsset(e) {
                     onChange={handleChange}
                   />
 
-                  <button onClick={() => updateAsset(asset.id)}>
-                    Save
-                  </button>
-                  <button onClick={() => setEditingId(null)}>
-                    Cancel
-                  </button>
+                  <button onClick={() => updateAsset(asset.id)}>Save</button>
+                  <button onClick={() => setEditingId(null)}>Cancel</button>
                 </>
               ) : (
                 <>
                   <strong>{asset.asset_tag}</strong> - {asset.name}
-                  <Link to={`/assets/${asset.id}`}>
-  {asset.name}
-</Link>
-                  ({asset.status})
-                  {" | Dept: "}
+                  <Link to={`/assets/${asset.id}`}>{asset.name}</Link>(
+                  {asset.status}){" | Dept: "}
                   {asset.departments?.name || "None"}
-
-                  <button onClick={() => startEdit(asset)}>
-                    Edit
-                  </button>
-                  <button onClick={() => setConfirmId(asset.id)}>
-                    Delete
-                  </button>
+                  <button onClick={() => startEdit(asset)}>Edit</button>
+                  <button onClick={() => setConfirmId(asset.id)}>Delete</button>
                 </>
               )}
-
             </li>
           ))}
         </ul>

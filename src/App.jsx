@@ -8,7 +8,9 @@ import Navbar from "./components/Navbar";
 import AdminUsers from "./pages/AdminUsers/AdminUsers";
 import Assignments from "./pages/Assignments/Assignments";
 import AssetDetail from "./pages/Assets/AssetDetails";
-
+import Maintenance from "./pages/Maintenance/Maintenance";
+import AuditLogs from "./pages/AuditLogs/AuditLogs";
+import Dashboard from "./pages/Dashboard/Dashboard";
 function App() {
   return (
     <>
@@ -17,7 +19,14 @@ function App() {
       <Routes>
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-
+        <Route
+  path="/"
+  element={
+    <ProtectedRoute allowedRoles={["admin", "staff"]}>
+      <Dashboard />
+    </ProtectedRoute>
+  }
+/>
         <Route
           path="/departments"
           element={
@@ -57,6 +66,22 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <AssetDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/maintenance"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "staff"]}>
+              <Maintenance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/audit-logs"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AuditLogs />
             </ProtectedRoute>
           }
         />
