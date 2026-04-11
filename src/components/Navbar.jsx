@@ -340,9 +340,9 @@ export default function Navbar() {
               Admin Panel
             </NavLink>
           )} */}
-          <Link to="/notifications">
+          {/* <Link to="/notifications">
             🔔 {unreadCount > 0 && <span>({unreadCount})</span>}
-          </Link>
+          </Link> */}
         </div>
       )}
 

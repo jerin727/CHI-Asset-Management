@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/useAuth";
+import { v4 as uuidv4 } from "uuid";
+import { QRCodeCanvas } from "qrcode.react";
 
 export default function AdminUsers() {
   const { isAdmin } = useAuth();
@@ -8,10 +10,39 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
-
+  const [selectedQr, setSelectedQr] = useState(null);
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  async function generateQr(staffId) {
+    const token = uuidv4();
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({
+        qr_token: token,
+        qr_enabled: true,
+      })
+      .eq("id", staffId)
+      .select();
+
+    console.log("QR Update Data:", data);
+    console.log("QR Update Error:", error);
+
+    if (!error) fetchUsers();
+  }
+  async function deleteQr(staffId) {
+    await supabase
+      .from("profiles")
+      .update({
+        qr_token: null,
+        qr_enabled: false,
+      })
+      .eq("id", staffId);
+
+    fetchUsers();
+  }
 
   // Load when admin
   useEffect(() => {
@@ -29,9 +60,7 @@ export default function AdminUsers() {
   }, [search, roleFilter, departmentFilter]);
 
   async function fetchDepartments() {
-    const { data } = await supabase
-      .from("departments")
-      .select("id, name");
+    const { data } = await supabase.from("departments").select("id, name");
 
     setDepartments(data || []);
   }
@@ -41,14 +70,18 @@ export default function AdminUsers() {
 
     let query = supabase
       .from("profiles")
-      .select(`
+      .select(
+        `
         id,
         full_name,
         role,
         department_id,
         created_at,
+        qr_token,
+        qr_enabled,
         departments(name)
-      `)
+      `,
+      )
       .order("created_at", { ascending: false });
 
     if (search) {
@@ -99,6 +132,16 @@ export default function AdminUsers() {
 
   if (!isAdmin) return <p>Access denied</p>;
 
+  // function viewQr(user) {
+  //   setSelectedQr(user);
+  // }
+  function viewQr(user) {
+    if (!user.qr_token) {
+      alert("QR not generated for this user");
+      return;
+    }
+    setSelectedQr(user);
+  }
   return (
     <div style={{ padding: 20 }}>
       <h2>Admin User Management</h2>
@@ -133,6 +176,47 @@ export default function AdminUsers() {
           ))}
         </select>
       </div>
+      {selectedQr && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              padding: 20,
+              borderRadius: 10,
+              textAlign: "center",
+            }}
+          >
+            <h3>{selectedQr.full_name} - QR Code</h3>
+
+            {/* <QRCode
+              value={`${window.location.origin}/qr/${selectedQr.qr_token}`}
+              size={200}
+            /> */}
+            {selectedQr.qr_token && (
+              <QRCodeCanvas
+                value={`${window.location.origin}/qr/${selectedQr.qr_token}`}
+                size={200}
+              />
+            )}
+            <br />
+            <br />
+
+            <button onClick={() => setSelectedQr(null)}>Close</button>
+          </div>
+        </div>
+      )}
 
       {/* 📋 TABLE */}
       {loading ? (
@@ -146,6 +230,7 @@ export default function AdminUsers() {
               <th>Department</th>
               <th>Created</th>
               <th>Action</th>
+              <th>Qr</th>
             </tr>
           </thead>
 
@@ -182,9 +267,7 @@ export default function AdminUsers() {
                   </select>
                 </td>
 
-                <td>
-                  {new Date(user.created_at).toLocaleDateString()}
-                </td>
+                <td>{new Date(user.created_at).toLocaleDateString()}</td>
 
                 <td>
                   <button
@@ -193,6 +276,18 @@ export default function AdminUsers() {
                   >
                     Delete
                   </button>
+                </td>
+                <td>
+                  {user.qr_token ? (
+                    <>
+                      <button onClick={() => viewQr(user)}>View</button>
+                      <button onClick={() => deleteQr(user.id)}>Delete</button>
+                    </>
+                  ) : (
+                    <button onClick={() => generateQr(user.id)}>
+                      Generate
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

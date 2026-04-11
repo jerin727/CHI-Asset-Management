@@ -10,50 +10,43 @@ export function NotificationProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
-      subscribeToNotifications();
-    }
+    if (!user) return;
+
+    fetchNotifications();
+
+    const channel = supabase
+      .channel(`notifications-${user.id}`) // unique channel per user
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`, // IMPORTANT
+        },
+        (payload) => {
+          setNotifications((prev) => [payload.new, ...prev]);
+          setUnreadCount((prev) => prev + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel); // cleanup
+    };
   }, [user]);
 
   async function fetchNotifications() {
     const { data } = await supabase
       .from("notifications")
       .select("*")
+      .eq("user_id", user.id) // filter by logged user
       .order("created_at", { ascending: false });
 
     setNotifications(data || []);
 
     const unread = data?.filter((n) => !n.is_read).length || 0;
     setUnreadCount(unread);
-  }
-
-  function subscribeToNotifications() {
-    // supabase
-    //   .channel("notifications")
-    //   .on(
-    //     "postgres_changes",
-    //     { event: "INSERT", schema: "public", table: "notifications" },
-    //     (payload) => {
-    //       setNotifications((prev) => [payload.new, ...prev]);
-    //       setUnreadCount((prev) => prev + 1);
-    //     }
-    //   )
-    //   .subscribe();
-    const channel = supabase
-  .channel("notifications")
-  .on(
-    "postgres_changes",
-    {
-      event: "INSERT",
-      schema: "public",
-      table: "notifications",
-    },
-    (payload) => {
-      console.log("New notification:", payload);
-    }
-  )
-  .subscribe();
   }
 
   async function markAsRead(id) {

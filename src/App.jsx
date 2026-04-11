@@ -11,6 +11,7 @@ import AssetDetail from "./pages/Assets/AssetDetails";
 import Maintenance from "./pages/Maintenance/Maintenance";
 import AuditLogs from "./pages/AuditLogs/AuditLogs";
 import Dashboard from "./pages/Dashboard/Dashboard";
+import StaffQrView from "./pages/Qr/StaffQrView";
 function App() {
   return (
     <>
@@ -85,6 +86,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/staff-qr/:token" element={<StaffQrView />} />
       </Routes>
     </>
   );
